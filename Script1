@@ -1,0 +1,61 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local guiBase = player:WaitForChild("PlayerGui"):WaitForChild("Seed_Shop"):WaitForChild("Frame"):WaitForChild("ScrollingFrame")
+local buyEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
+
+-- List of all item frame names you provided
+local itemNames = {
+	"Apple", "Bamboo", "Cactus", "Carrot", "Coconut",
+	"Corn", "Dragon Fruit", "Mango", "Pumpkin", "Tomato", "Watermelon"
+}
+
+local processed = {}
+
+-- Function to extract number from "X5 Stock"
+local function getStockValue(stockText)
+	local stock = string.match(stockText, "X(%d+)")
+	return tonumber(stock)
+end
+
+-- Handle monitoring one item
+local function monitorItem(itemName)
+	local itemFrame = guiBase:WaitForChild(itemName)
+	local stockTextLabel = itemFrame:FindFirstChild("Stock_Text", true)
+
+	if not stockTextLabel or not stockTextLabel:IsA("TextLabel") then
+		warn("Could not find Stock_Text for:", itemName)
+		return
+	end
+
+	print("[INIT] Monitoring stock for", itemName)
+
+	local function onStockChanged()
+		local currentStock = getStockValue(stockTextLabel.Text)
+		print("[STOCK CHECK]", itemName, "stock is now:", stockTextLabel.Text)
+
+		if currentStock and currentStock > 0 and not processed[itemName] then
+			processed[itemName] = true
+			print("[BUY]", itemName, "x" .. currentStock)
+			for i = 1, currentStock do
+				buyEvent:FireServer(itemName)
+			end
+		elseif currentStock == 0 then
+			-- Reset flag to allow future buys
+			processed[itemName] = nil
+			print("[RESET]", itemName, "stock is now 0")
+		end
+	end
+
+	-- Connect the event
+	stockTextLabel:GetPropertyChangedSignal("Text"):Connect(onStockChanged)
+	onStockChanged() -- Initial call
+end
+
+-- Monitor each item
+for _, itemName in ipairs(itemNames) do
+	task.spawn(function()
+		monitorItem(itemName)
+	end)
+end
