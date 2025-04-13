@@ -1,30 +1,14 @@
--- ✅ Wait for game and player to fully load
-repeat wait() until game:IsLoaded()
+local library = loadstring(game:HttpGet(('https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wall%20v3')))()
+local w = library:CreateWindow("Grow a Garden")
 
+local b = w:CreateFolder("Scripts")
+
+b:Button("Auto Buy",function()
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
-
--- ✅ Wait for PlayerGui to exist
-while not player:FindFirstChild("PlayerGui") do
-	wait()
-end
-
-local playerGui = player:WaitForChild("PlayerGui")
-
--- ✅ Wait until Seed_Shop UI is loaded
-local guiBase = nil
-repeat
-	wait()
-	local success, result = pcall(function()
-		guiBase = playerGui:WaitForChild("Seed_Shop", 5)
-			:WaitForChild("Frame", 5)
-			:WaitForChild("ScrollingFrame", 5)
-	end)
-until success and guiBase
-
--- ✅ Wait for the remote event
+local guiBase = player:WaitForChild("PlayerGui"):WaitForChild("Seed_Shop"):WaitForChild("Frame"):WaitForChild("ScrollingFrame")
 local buyEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
 
 -- List of all item frame names you provided
@@ -81,3 +65,71 @@ for _, itemName in ipairs(itemNames) do
 		monitorItem(itemName)
 	end)
 end
+
+end)
+
+b:Button("Restock Timer",function()
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Path to the timer label
+local timerLabel = playerGui:WaitForChild("Seed_Shop")
+	:WaitForChild("Frame")
+	:WaitForChild("Frame")
+	:WaitForChild("Timer")
+
+-- Create a hint bar GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RestockTimerHint"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.Size = UDim2.new(1, 0, 0, 30)
+frame.Position = UDim2.new(0, 0, 0, 0)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+local label = Instance.new("TextLabel")
+label.BackgroundTransparency = 1
+label.Size = UDim2.new(1, 0, 1, 0)
+label.Font = Enum.Font.SourceSansBold
+label.TextSize = 20
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.TextStrokeTransparency = 0.8
+label.Text = "Restock in: ??"
+label.Parent = frame
+
+-- Function to extract time and update label
+local function updateHint()
+	local text = timerLabel.Text
+	local timeStr = string.match(text, "(%d+:%d+)")
+	if timeStr then
+		label.Text = "🌱 Seed Restock in: " .. timeStr
+	end
+end
+
+-- Connect to changes
+timerLabel:GetPropertyChangedSignal("Text"):Connect(updateHint)
+updateHint() -- Initial update
+
+end)
+
+b:Button("Sell (N)",function()
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local sellEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("Sell_Inventory")
+
+-- Listen for key press
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end -- Ignore if the player is typing in a textbox
+
+	if input.KeyCode == Enum.KeyCode.N then
+		sellEvent:FireServer()
+	end
+end)
+
+end)
