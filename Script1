@@ -14,7 +14,7 @@ b:Button("Auto Buy",function()
 	local buyEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
 
 	local itemNames = {
-		"Apple", "Bamboo", "Cactus", "Carrot", "Coconut",
+		"Apple", "Bamboo", "Cactus", "Strawberry", "Coconut",
 		"Corn", "Dragon Fruit", "Mango", "Pumpkin", "Tomato", "Watermelon"
 	}
 
