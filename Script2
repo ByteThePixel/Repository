@@ -1,0 +1,45 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Path to the timer label
+local timerLabel = playerGui:WaitForChild("Seed_Shop")
+	:WaitForChild("Frame")
+	:WaitForChild("Frame")
+	:WaitForChild("Timer")
+
+-- Create a hint bar GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RestockTimerHint"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.Size = UDim2.new(1, 0, 0, 30)
+frame.Position = UDim2.new(0, 0, 0, 0)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+local label = Instance.new("TextLabel")
+label.BackgroundTransparency = 1
+label.Size = UDim2.new(1, 0, 1, 0)
+label.Font = Enum.Font.SourceSansBold
+label.TextSize = 20
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.TextStrokeTransparency = 0.8
+label.Text = "Restock in: ??"
+label.Parent = frame
+
+-- Function to extract time and update label
+local function updateHint()
+	local text = timerLabel.Text
+	local timeStr = string.match(text, "(%d+:%d+)")
+	if timeStr then
+		label.Text = "🌱 Seed Restock in: " .. timeStr
+	end
+end
+
+-- Connect to changes
+timerLabel:GetPropertyChangedSignal("Text"):Connect(updateHint)
+updateHint() -- Initial update
