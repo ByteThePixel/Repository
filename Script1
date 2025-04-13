@@ -1,13 +1,35 @@
+-- ✅ Wait for game and player to fully load
+repeat wait() until game:IsLoaded()
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
-local guiBase = player:WaitForChild("PlayerGui"):WaitForChild("Seed_Shop"):WaitForChild("Frame"):WaitForChild("ScrollingFrame")
+
+-- ✅ Wait for PlayerGui to exist
+while not player:FindFirstChild("PlayerGui") do
+	wait()
+end
+
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ✅ Wait until Seed_Shop UI is loaded
+local guiBase = nil
+repeat
+	wait()
+	local success, result = pcall(function()
+		guiBase = playerGui:WaitForChild("Seed_Shop", 5)
+			:WaitForChild("Frame", 5)
+			:WaitForChild("ScrollingFrame", 5)
+	end)
+until success and guiBase
+
+-- ✅ Wait for the remote event
 local buyEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
 
 -- List of all item frame names you provided
 local itemNames = {
-	"Apple", "Bamboo", "Cactus", "Coconut",
+	"Apple", "Bamboo", "Cactus", "Carrot", "Coconut",
 	"Corn", "Dragon Fruit", "Mango", "Pumpkin", "Tomato", "Watermelon"
 }
 
