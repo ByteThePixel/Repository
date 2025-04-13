@@ -7,7 +7,7 @@ local buyEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuyS
 
 -- List of all item frame names you provided
 local itemNames = {
-	"Apple", "Bamboo", "Cactus", "Carrot", "Coconut",
+	"Apple", "Bamboo", "Cactus", "Coconut",
 	"Corn", "Dragon Fruit", "Mango", "Pumpkin", "Tomato", "Watermelon"
 }
 
