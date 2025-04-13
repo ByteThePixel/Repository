@@ -1,29 +1,45 @@
--- ✅ Wait for the game to finish loading
 repeat wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- ✅ Wait for PlayerGui to exist
 while not player:FindFirstChild("PlayerGui") do
 	wait()
 end
 
 local playerGui = player:WaitForChild("PlayerGui")
 
--- ✅ Wait until the timer label exists
-local timerLabel = nil
-repeat
-	wait()
-	local success, result = pcall(function()
-		timerLabel = playerGui:WaitForChild("Seed_Shop", 5)
-			:WaitForChild("Frame", 5)
-			:WaitForChild("Frame", 5)
-			:WaitForChild("Timer", 5)
-	end)
-until success and timerLabel
+-- Debug helpers
+local function safeWait(parent, childName)
+	local child = parent:FindFirstChild(childName)
+	local timeout = 10
+	local start = tick()
+	while not child and tick() - start < timeout do
+		wait()
+		child = parent:FindFirstChild(childName)
+	end
+	if not child then
+		warn("[LOAD FAIL] Could not find:", childName, "in", parent:GetFullName())
+	end
+	return child
+end
 
--- ✅ Create a hint bar GUI
+-- Step-by-step debug
+local seedShop = safeWait(playerGui, "Seed_Shop")
+if not seedShop then return end
+
+local outerFrame = safeWait(seedShop, "Frame")
+if not outerFrame then return end
+
+local innerFrame = safeWait(outerFrame, "Frame")
+if not innerFrame then return end
+
+local timerLabel = safeWait(innerFrame, "Timer")
+if not timerLabel then return end
+
+print("[✅] TimerLabel found!")
+
+-- GUI creation
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RestockTimerHint"
 screenGui.ResetOnSpawn = false
@@ -46,7 +62,7 @@ label.TextStrokeTransparency = 0.8
 label.Text = "Restock in: ??"
 label.Parent = frame
 
--- ✅ Function to extract time and update label
+-- Update function
 local function updateHint()
 	local text = timerLabel.Text
 	local timeStr = string.match(text, "(%d+:%d+)")
@@ -55,6 +71,5 @@ local function updateHint()
 	end
 end
 
--- ✅ Connect to changes
 timerLabel:GetPropertyChangedSignal("Text"):Connect(updateHint)
-updateHint() -- Initial update
+updateHint()
