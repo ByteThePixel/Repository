@@ -77,6 +77,7 @@ b:Button("Restock Timer",function()
 	screenGui.Name = "RestockTimerHint"
 	screenGui.ResetOnSpawn = false
 	screenGui.Parent = playerGui
+	screenGui.DisplayOrder = 10
 
 	local frame = Instance.new("Frame")
 	frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
