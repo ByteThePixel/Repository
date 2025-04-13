@@ -1,0 +1,13 @@
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local sellEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("Sell_Inventory")
+
+-- Listen for key press
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end -- Ignore if the player is typing in a textbox
+
+	if input.KeyCode == Enum.KeyCode.N then
+		sellEvent:FireServer()
+	end
+end)
