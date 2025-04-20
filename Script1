@@ -6,61 +6,163 @@ local w = library:CreateWindow("Grow a Garden")
 local b = w:CreateFolder("Scripts")
 
 b:Button("Auto Buy",function()
-	local Players = game:GetService("Players")
-	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
-	local player = Players.LocalPlayer
-	local guiBase = player:WaitForChild("PlayerGui"):WaitForChild("Seed_Shop"):WaitForChild("Frame"):WaitForChild("ScrollingFrame")
-	local buyEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
+local player = Players.LocalPlayer
+local guiBase = player:WaitForChild("PlayerGui"):WaitForChild("Seed_Shop"):WaitForChild("Frame"):WaitForChild("ScrollingFrame")
+local gearGuiBase = player:WaitForChild("PlayerGui"):WaitForChild("Gear_Shop"):WaitForChild("Frame"):WaitForChild("ScrollingFrame")
+local easterGuiBase = player:WaitForChild("PlayerGui"):WaitForChild("Easter_Shop"):WaitForChild("Frame"):WaitForChild("ScrollingFrame")
 
-	local itemNames = {
-		"Apple", "Bamboo", "Cactus", "Carrot", "Blueberry", "Strawberry", "Coconut",
-		"Corn", "Dragon Fruit", "Mango", "Pumpkin", "Tomato", "Watermelon"
-	}
+local buySeedEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
+local buyGearEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuyGearStock")
+local buyEasterEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuyEasterStock")
 
-	local processed = {}
+local webhookUrl = "https://discord.com/api/webhooks/1361347625630040156/wRzGgyWo-Fb8vbypCzWG-yllKfYFHDsUAi1wiWBy7aH96Ocjdzs__xFhk_BofOuJpvm5"
 
-	local function getStockValue(stockText)
-		local stock = string.match(stockText, "X(%d+)")
-		return tonumber(stock)
+local itemNames = {
+	"Apple", "Bamboo", "Cactus", "Carrot", "Blueberry", "Strawberry", "Coconut",
+	"Corn", "Dragon Fruit", "Mango", "Pumpkin", "Tomato", "Watermelon",
+	"Daffodil", "Grape", "Orange Tulip" -- ← added these
+}
+
+local easterItems = {
+	"Candy Blossom", "Candy Sunflower", "Chocolate Carrot",
+	"Chocolate Sprinkler", "Easter Egg", "Red Lollipop"
+}
+
+local processed = {}
+local sessionPurchases = {}
+
+-- === Function to convert stock text (e.g., "X5") into number
+local function getStockValue(stockText)
+	local stock = string.match(stockText, "X(%d+)")
+	return tonumber(stock)
+end
+
+-- === Function to track purchases
+local function recordPurchase(itemName, quantity)
+	sessionPurchases[itemName] = (sessionPurchases[itemName] or 0) + quantity
+end
+
+-- === Function to send summary webhook message
+local function sendSummaryWebhook()
+	if next(sessionPurchases) == nil then return end -- skip if nothing bought
+
+	local lines = {}
+	table.insert(lines, "**[AutoBuy Summary]** Session Purchase Report:")
+
+	for item, amount in pairs(sessionPurchases) do
+		table.insert(lines, "`" .. item .. "` x" .. amount)
 	end
 
-	local function monitorItem(itemName)
-		local itemFrame = guiBase:WaitForChild(itemName)
-		local stockTextLabel = itemFrame:FindFirstChild("Stock_Text", true)
+	local message = table.concat(lines, "\n")
 
-		if not stockTextLabel or not stockTextLabel:IsA("TextLabel") then
-			warn("Could not find Stock_Text for:", itemName)
-			return
+	local payload = HttpService:JSONEncode({ content = message })
+
+	local success, err = pcall(function()
+		if syn and syn.request then
+			syn.request({
+				Url = webhookUrl,
+				Method = "POST",
+				Headers = { ["Content-Type"] = "application/json" },
+				Body = payload
+			})
+		elseif http and http.request then
+			http.request({
+				Url = webhookUrl,
+				Method = "POST",
+				Headers = { ["Content-Type"] = "application/json" },
+				Body = payload
+			})
+		elseif request then
+			request({
+				Url = webhookUrl,
+				Method = "POST",
+				Headers = { ["Content-Type"] = "application/json" },
+				Body = payload
+			})
+		else
+			warn("No supported HTTP request function found.")
 		end
+	end)
 
-		print("[INIT] Monitoring stock for", itemName)
+	if not success then
+		warn("[WEBHOOK ERROR]", err)
+	end
+end
 
-		local function onStockChanged()
-			local currentStock = getStockValue(stockTextLabel.Text)
-			print("[STOCK CHECK]", itemName, "stock is now:", stockTextLabel.Text)
+-- === Monitors one item
+local function monitorItem(itemName, frameParent, buyFunc)
+	local itemFrame = frameParent:WaitForChild(itemName)
+	local stockTextLabel = itemFrame:FindFirstChild("Stock_Text", true)
 
-			if currentStock and currentStock > 0 and not processed[itemName] then
-				processed[itemName] = true
-				print("[BUY]", itemName, "x" .. currentStock)
-				for i = 1, currentStock do
-					buyEvent:FireServer(itemName)
-				end
-			elseif currentStock == 0 then
-				processed[itemName] = nil
-				print("[RESET]", itemName, "stock is now 0")
+	if not stockTextLabel or not stockTextLabel:IsA("TextLabel") then
+		warn("Could not find Stock_Text for:", itemName)
+		return
+	end
+
+	print("[INIT] Monitoring stock for", itemName)
+
+	local function onStockChanged()
+		local currentStock = getStockValue(stockTextLabel.Text)
+		print("[STOCK CHECK]", itemName, "stock is now:", stockTextLabel.Text)
+
+		if currentStock and currentStock > 0 and not processed[itemName] then
+			processed[itemName] = true
+			print("[BUY]", itemName, "x" .. currentStock)
+
+			for i = 1, currentStock do
+				buyFunc(itemName)
 			end
+
+			recordPurchase(itemName, currentStock)
+		elseif currentStock == 0 then
+			processed[itemName] = nil
+			print("[RESET]", itemName, "stock is now 0")
 		end
-
-		stockTextLabel:GetPropertyChangedSignal("Text"):Connect(onStockChanged)
-		onStockChanged()
 	end
 
-	for _, itemName in ipairs(itemNames) do
-		task.spawn(function()
-			monitorItem(itemName)
+	stockTextLabel:GetPropertyChangedSignal("Text"):Connect(onStockChanged)
+	onStockChanged()
+end
+
+-- === Start monitoring seed items
+for _, itemName in ipairs(itemNames) do
+	task.spawn(function()
+		monitorItem(itemName, guiBase, function(name)
+			buySeedEvent:FireServer(name)
 		end)
+	end)
+end
+
+-- === Monitor GodlySprinkler
+for _, gearName in ipairs({ "GodlySprinkler", "MasterSprinkler" }) do
+	task.spawn(function()
+		monitorItem(gearName, gearGuiBase, function(name)
+			buyGearEvent:FireServer(name, 0)
+		end)
+	end)
+end
+
+-- === Monitor Easter Items
+for _, itemName in ipairs(easterItems) do
+	task.spawn(function()
+		monitorItem(itemName, easterGuiBase, function(name)
+			buyEasterEvent:FireServer(name)
+		end)
+	end)
+end
+
+-- === Periodically send webhook summary
+task.spawn(function()
+	while true do
+		wait(300) -- send every 5 Minutes (you can change this)
+		sendSummaryWebhook()
 	end
+end)
+
 end)
 
 b:Button("Restock Timer",function()
